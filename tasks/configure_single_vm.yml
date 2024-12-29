@@ -1,0 +1,192 @@
+---
+- name: Delegate block
+  delegate_to: localhost
+  when:
+    - "kvm is defined"
+    - "'network' in kvm"
+  block:
+    - name: Fetch dns
+      ansible.builtin.set_fact:
+        dns_exists: "{{ lookup('community.general.dig', kvm.network[0].ip.split('/')[0], qtype='PTR') }}"
+    - name: Debug
+      ansible.builtin.debug:
+        var: dns_exists
+
+- name: Abort if dns exists
+  ansible.builtin.assert:
+    that:
+      - "('NXDOMAIN' in dns_exists) or (inventory_hostname in dns_exists)"
+    fail_msg: "DNS entry for IP already exists, and doesn't point to the same host"
+  when:
+    - "kvm is defined"
+    - "'network' in kvm"
+
+- name: Get VM state adn create ipconfig
+  delegate_to: localhost
+  block:
+    - name: Get current vm state
+      community.general.proxmox_kvm:
+        api_user: "{{ api_user }}"
+        api_password: "{{ api_password }}"
+        api_host: "{{ api_host }}"
+        name: "{{ vm_name }}"
+        node: "{{ proxmox_node }}"
+        state: current
+      register: vm_state
+      check_mode: false
+      failed_when: false
+
+    - name: Show vm state register
+      ansible.builtin.debug:
+        msg: "{{ vm_state }}"
+
+    - name: Show  vm state
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }} is {{ vm_state.status }}"
+      when:
+        - "'status' in vm_state"
+
+    - name: Show  vm state
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }} will be created"
+      when:
+        - "'status' not in vm_state"
+
+    - name: Create ipconfig
+      ansible.builtin.set_fact:
+        ipconfig: "{{ ( ipconfig | d({}) ) | combine({ 'ipconfig'~idx: ('gw='~item.gw ~',' if 'gw'  in item else '') ~'ip='~item.ip }) }}"
+      loop: "{{ kvm.network }}"
+      loop_control:
+        index_var: idx
+      when:
+        - vm_state.msg is search('does not exist in cluster')
+        - "'network' in kvm"
+        - "'ipconfig' not in kvm"
+        - "'ip' in item"
+
+    - name: Create ipconfig
+      ansible.builtin.set_fact:
+        ipconfig: "{{ kvm.ipconfig }}"
+      when:
+        - vm_state.msg is search('does not exist in cluster')
+        - "'ipconfig' in kvm"
+
+    - name: Debug ipconfig
+      ansible.builtin.debug:
+        var: ipconfig
+        verbosity: 1
+
+    # cloning only cares about a very limited set of options: https://github.com/ansible-collections/community.general/issues/1342
+    # valid_clone_params = ['format', 'full', 'pool', 'snapname', 'storage', 'target']
+    - name: Clone VM template
+      community.general.proxmox_kvm:
+        api_user: "{{ api_user }}"
+        api_password: "{{ api_password }}"
+        api_host: "{{ api_host }}"
+        # setting clone might be enough...
+        clone: "{{ template_id }}"
+        vmid: "{{ template_id }}"
+        name: "{{ vm_name }}"
+        node: "{{ proxmox_node }}"
+        storage: "{{ storage }}"
+        ostype: "{{ ostype }}"
+        timeout: 300
+      register: vm_create
+      when: vm_state.msg is search('does not exist in cluster')
+      throttle: 1
+
+    - name: Wait for proxmox
+      ansible.builtin.pause:
+        seconds: 10
+        prompt: "just give it some time"
+      when: vm_state.msg is search('does not exist in cluster')
+
+    # This will also configure the net0 device, with a new MAC address
+    - name: Add additional NICs
+      community.general.proxmox_nic:
+        api_user: "{{ api_user }}"
+        api_password: "{{ api_password }}"
+        api_host: "{{ api_host }}"
+        name: "{{ vm_name }}"
+        interface: "{{ item.name }}"
+        bridge: "{{ item.bridge }}"
+        mac: "{{ '86:67:81' | random_mac(seed=inventory_hostname ~ item.name ~ item.bridge) }}"
+        firewall: false
+      loop: "{{ kvm.network }}"
+      loop_control:
+        index_var: idx
+      when:
+        - "'network' in kvm"
+
+    # update will drop `net, virtio, ide, sata, scsi`
+    # But since we added the nics beforehand, we can now set the ipconfig
+    - name: Set resources
+      community.general.proxmox_kvm:
+        api_user: "{{ api_user }}"
+        api_password: "{{ api_password }}"
+        api_host: "{{ api_host }}"
+        startup: "{{ omit if 'order' not in kvm else 'order='~kvm.order }}"
+        onboot: "{{ autostart }}"
+        name: "{{ vm_name }}"
+        node: "{{ proxmox_node }}"
+        cores: "{{ cores }}"
+        sockets: "{{ sockets }}"
+        memory: "{{ memory }}"
+        tags: "{{ kvm_tags | d(omit) }}"
+        ipconfig: "{{ ipconfig | d(omit) }}"
+        update: true
+
+    - name: Add / remove disks
+      community.general.proxmox_disk:
+        api_user: "{{ api_user }}"
+        api_password: "{{ api_password }}"
+        api_host: "{{ api_host }}"
+        name: "{{ vm_name }}"
+        disk: "{{ item.name }}"
+        size: "{{ item.size }}"
+        storage: ssd-pool
+        backup: false
+        state: "{{ item.state | d('present') }}"
+        ssd: true
+        discard: true # original " on "?
+      loop: "{{ kvm.disks }}"
+      when:
+        - "'disks' in kvm"
+
+    - name: Show debug output
+      ansible.builtin.debug:
+        var: vm_create.vmid
+        verbosity: 1
+      delegate_to: localhost
+
+    - name: Resize boot disk
+      community.general.proxmox_disk:
+        api_user: "{{ api_user }}"
+        api_password: "{{ api_password }}"
+        api_host: "{{ api_host }}"
+        name: "{{ vm_name }}"
+        disk: scsi0
+        size: "{{ boot_disk_size }}"
+        state: resized
+
+- name: Start new vms
+  community.general.proxmox_kvm:
+    api_user: "{{ api_user }}"
+    api_password: "{{ api_password }}"
+    api_host: "{{ api_host }}"
+    name: "{{ vm_name }}"
+    node: "{{ proxmox_node }}"
+    state: started
+    timeout: 90
+  when: vm_create is not skipped
+  ignore_errors: true
+  delegate_to: localhost
+
+- name: Vm needs restart?
+  ansible.builtin.debug:
+    msg: "You need to restart {{ vm_name }}, to make some changes effective"
+  when:
+    - "'status' in vm_state"
+    - "vm_state.status is not match('stopped')"
+    - "vm_create is not skipped"
+  delegate_to: localhost

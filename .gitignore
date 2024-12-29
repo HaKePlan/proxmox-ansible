@@ -3,6 +3,7 @@
 vault-password
 fetch/*
 .galaxy_collections/*
+.gaebigicommands
 
 
 # Created by https://www.gitignore.io/api/macos,linux,python,ansible,windows,jetbrains,visualstudio

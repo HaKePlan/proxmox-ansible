@@ -1,0 +1,4 @@
+---
+# vm management
+api_host: 10.130.10.10
+api_user: gigu@pam

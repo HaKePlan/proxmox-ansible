@@ -1,0 +1,14 @@
+---
+kvm:
+  boot_disk_size: 5G
+  cores: 2
+  memory: 2048
+  autostart: true
+  tags:
+    - debian
+    - bookworm
+  network:
+    - name: net0
+      bridge: vmbr300
+      ip: 10.130.30.101/24
+      gw: 10.130.30.1
