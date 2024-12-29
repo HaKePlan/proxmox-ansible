@@ -1,0 +1,12 @@
+nic_interfaces:
+  - name: enp2s0
+
+nic_vlans:
+  - name: enp2s0.100
+    interface: enp2s0
+    id: 100
+    dhcp: true
+  - name: enp2s0.300
+    interface: enp2s0
+    id: 300
+    bridge: true
