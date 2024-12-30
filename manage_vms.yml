@@ -16,5 +16,10 @@
         ostype: "{{ kvm.ostype | d('l26') }}"
         kvm_tags: "{{ kvm.tags | d([]) }}"
       when: kvm.state | d('present') == 'present'
-  tags:
-    - configure-vm
+
+    - name: Decomissioning a VM
+      ansible.builtin.include_tasks: tasks/decommission_vm.yml
+      vars:
+        proxmox_node: "{{ kvm.host | d('chuebel') }}"
+        vm_name: "{{ inventory_hostname }}"
+      when: kvm.state | d('present') == 'absent'

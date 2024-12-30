@@ -1,0 +1,53 @@
+---
+- name: Decomissioning VM task
+  delegate_to: localhost
+  block:
+    - name: Get current vm state
+      community.general.proxmox_kvm:
+        api_user: "{{ api_user }}"
+        api_password: "{{ api_password }}"
+        api_host: "{{ api_host }}"
+        name: "{{ vm_name }}"
+        node: "{{ proxmox_node }}"
+        state: current
+      register: vm_state
+      check_mode: false
+      failed_when: false
+
+    - name: Debut vm_state
+      ansible.builtin.debug:
+        msg: "{{ vm_state }}"
+
+    - name: Stop and remove VM
+      when: vm_state.msg is not search('does not exist in cluster')
+      block:
+        - name: Stop vm
+          community.general.proxmox_kvm:
+            api_user: "{{ api_user }}"
+            api_password: "{{ api_password }}"
+            api_host: "{{ api_host }}"
+            name: "{{ vm_name }}"
+            node: "{{ proxmox_node }}"
+            state: stopped
+            timeout: 300
+          when:
+            - "'status' in vm_state"
+            - "vm_state.status is not match('stopped')"
+
+        - name: Wait for vm to properly stop
+          ansible.builtin.pause:
+            seconds: 20
+          when:
+            - "'status' in vm_state"
+            - "vm_state.status is not match('stopped')"
+
+        - name: Delete vm
+          community.general.proxmox_kvm:
+            api_user: "{{ api_user }}"
+            api_password: "{{ api_password }}"
+            api_host: "{{ api_host }}"
+            name: "{{ vm_name }}"
+            node: "{{ proxmox_node }}"
+            state: absent
+          when:
+            - "'status' in vm_state"

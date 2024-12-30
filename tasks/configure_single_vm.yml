@@ -148,7 +148,7 @@
         backup: false
         state: "{{ item.state | d('present') }}"
         ssd: true
-        discard: true # original " on "?
+        discard: true
       loop: "{{ kvm.disks }}"
       when:
         - "'disks' in kvm"
