@@ -1,2 +1,8 @@
 ---
 template_id: 9001
+
+dns_server: stinkfisch
+dns_hosts_config_directroy: /etc/unbound/local.d
+
+network_domains:
+  vmbr300: srv.pfuetze.xyz

@@ -1,6 +1,15 @@
 ---
 - hosts: vm
   gather_facts: false
+  handlers:
+    - name: Restart unbound service
+      ansible.builtin.command: "/etc/init.d/unbound restart"
+      delegate_to: "{{ dns_server }}"
+      run_once: true
+      register: unbound_restart
+      changed_when: >
+        unbound_restart.stdout.splitlines() | select('search', '\\[  OK  \\]') | list | length == unbound_restart.stdout.splitlines() | length
+      failed_when: unbound_restart.stderr != ""
   tasks:
     - name: Add or configure a VM
       ansible.builtin.include_tasks: tasks/configure_single_vm.yml
@@ -23,3 +32,9 @@
         proxmox_node: "{{ kvm.host | d('chuebel') }}"
         vm_name: "{{ inventory_hostname }}"
       when: kvm.state | d('present') == 'absent'
+
+    - name: Create / delete dns entries for static ip
+      ansible.builtin.include_tasks: tasks/manage_dns_entries.yml
+      when: "'network' in kvm"
+      tags:
+        - dns-only

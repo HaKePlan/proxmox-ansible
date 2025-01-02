@@ -1,6 +1,5 @@
 ---
 kvm:
-  state: absent
   boot_disk_size: 5G
   cores: 2
   memory: 2048

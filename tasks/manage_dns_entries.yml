@@ -1,0 +1,30 @@
+---
+- name: Create dns entry for unbound on ipfire
+  delegate_to: "{{ dns_server }}"
+  when:
+    - kvm.network is defined
+    - kvm.state | d('present') == 'present'
+  block:
+    - name: Create file for {{ inventory_hostname }}
+      ansible.builtin.template:
+        src: templates/dns_unbound.j2
+        dest: "{{ dns_hosts_config_directroy }}/{{ inventory_hostname }}.conf"
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Restart unbound service
+      tags:
+        - dns-only
+
+- name: Remove dns entry for unbound on ipfire
+  delegate_to: "{{ dns_server }}"
+  when:
+    - kvm.state | d('present') == 'absent'
+  block:
+    - name: Remove file for {{ inventory_hostname }}
+      ansible.builtin.file:
+        path: "{{ dns_hosts_config_directroy }}/{{ inventory_hostname }}.conf"
+        state: absent
+      notify: Restart unbound service
+      tags:
+        - dns-only
