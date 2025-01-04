@@ -1,4 +1,4 @@
-ansible==11.1.0
+ansible-core==2.17.5
 dnspython==2.7.0
 jmespath==1.0.1
 proxmoxer==2.2.0

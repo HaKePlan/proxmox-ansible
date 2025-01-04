@@ -5,8 +5,8 @@ kvm:
   memory: 2048
   autostart: true
   tags:
+    - test
     - debian
-    - bookworm
   network:
     - name: net0
       bridge: vmbr300

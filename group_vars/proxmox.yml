@@ -11,6 +11,7 @@ base_package_list:
   - vim
   - unzip
   - htop
+  - libguestfs-tools
 
 # Storage Volume stuff
 lvm_thin_pool:
@@ -50,7 +51,7 @@ pve_acls:
     roles: ["Administrator"]
     groups: ["admin"]
 
-# users configured here using the pam realm need to be created on the machine first. 
+# users configured here using the pam realm need to be created on the machine first.
 # lea.proxmox only creates the user in proxmox but not on the host it self
 pve_users:
   - name: gigu@pam
