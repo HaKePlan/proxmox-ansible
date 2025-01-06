@@ -1,0 +1,14 @@
+---
+# To use the usb drive, attach usb manually to vm since this is only possible as root
+kvm:
+  boot_disk_size: 5G
+  cores: 2
+  memory: 4096
+  autostart: true
+  tags:
+    - debian
+  network:
+    - name: net0
+      bridge: vmbr300
+      ip: 10.130.30.111/24
+      gw: 10.130.30.1

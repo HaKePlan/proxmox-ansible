@@ -1,6 +1,6 @@
 # Ansible playbooks to kickstart VMs on proxmox
 
-This repository contains all the playbooks and files to setup and manage proxmox.
+This repository contains all the playbooks and files to set up and manage proxmox.
 
 ## Getting started
 
@@ -37,7 +37,7 @@ The `networking.yml` will configure all required bridges and vlan interfaces in 
 
 1) Configure new vm in `host_vars`
 2) add VM in `inventory` under the group `vm`
-3) run playbookcommand:
+3) run playbook command:
 
 ```
 ansible-playbook manage_vms.yml --tags configure-vm --limit test02
