@@ -1,0 +1,15 @@
+---
+kvm:
+  state: absent
+  boot_disk_size: 8G
+  cores: 2
+  memory: 2048
+  autostart: true
+  tags:
+    - docker
+    - debian
+  network:
+    - name: net0
+      bridge: vmbr300
+      ip: 10.130.30.10/24
+      gw: 10.130.30.1
