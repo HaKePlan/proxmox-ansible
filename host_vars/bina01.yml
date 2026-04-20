@@ -1,0 +1,28 @@
+---
+kvm:
+  boot_disk_size: 150G
+  cores: 4
+  memory: 8192
+  autostart: true
+  tags:
+    - test
+    - debian
+    - data-processing
+  network:
+    - name: net0
+      bridge: vmbr300
+      ip: 10.130.30.102/24
+      gw: 10.130.30.1
+
+# VM Purpose: Host PostgreSQL database and run Python data collection scripts
+# - load_meteo.py: MeteoSwiss precipitation data (1-2 min)
+# - collect_sbb.py: SBB train data (4-5 hours for full 2024-2025 range)
+# Repo: https://github.com/HaKePlan/bfh-bina-project
+#
+# Disk allocation:
+# - 150G provides space for: boot/system (~20G), PostgreSQL database (~30-50G),
+#   raw downloaded files (~50G), working space (~20G)
+#
+# Memory & CPU:
+# - 8GB RAM: PostgreSQL buffer pool, Python in-memory data processing, Docker overhead
+# - 4 cores: Parallel query processing, comfortable headroom for background tasks

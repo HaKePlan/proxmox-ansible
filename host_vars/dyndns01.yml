@@ -1,7 +1,5 @@
 ---
-# archived host record for a decommissioned VM
 kvm:
-  state: absent
   boot_disk_size: 5G
   cores: 2
   memory: 2048
@@ -11,5 +9,5 @@ kvm:
   network:
     - name: net0
       bridge: vmbr300
-      ip: 10.130.30.110/24
+      ip: 10.130.30.112/24
       gw: 10.130.30.1
