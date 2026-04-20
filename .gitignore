@@ -3,6 +3,7 @@
 vault-password
 fetch/*
 .galaxy_collections/*
+.ansible/
 .gaebigicommands
 
 
