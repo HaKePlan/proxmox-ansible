@@ -179,7 +179,7 @@
     state: started
     timeout: 90
   when: vm_create is not skipped
-  ignore_errors: true
+  failed_when: false
   delegate_to: localhost
 
 - name: Vm needs restart?
